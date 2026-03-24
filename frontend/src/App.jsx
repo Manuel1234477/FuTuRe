@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { isValidStellarAddress } from './utils/validateStellarAddress';
+import { validateAmount, formatAmount } from './utils/validateAmount';
 
 function App() {
   const [account, setAccount] = useState(null);
@@ -32,8 +33,13 @@ function App() {
   const recipientValid = isValidStellarAddress(recipient);
   const recipientTouched = recipient.length > 0;
 
+  const xlmBalance = balance?.balances?.find(b => b.asset === 'XLM')?.balance ?? null;
+  const amountTouched = amount.length > 0;
+  const amountError = validateAmount(amount, xlmBalance !== null ? parseFloat(xlmBalance) : null);
+  const amountValid = amountTouched && !amountError;
+
   const sendPayment = async () => {
-    if (!account || !recipientValid || !amount) return;
+    if (!account || !recipientValid || !amountValid) return;
     try {
       const { data } = await axios.post('/api/stellar/payment/send', {
         sourceSecret: account.secretKey,
@@ -103,14 +109,31 @@ function App() {
                 Invalid Stellar address format (must start with G and be 56 characters)
               </p>
             )}
-            <input
-              type="number"
-              placeholder="Amount (XLM)"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              style={{ width: '100%', marginBottom: '10px', padding: '8px' }}
-            />
-            <button onClick={sendPayment} disabled={!recipientValid || !amount}>Send</button>
+            <div style={{ position: 'relative', marginBottom: '4px' }}>
+              <input
+                type="text"
+                placeholder="Amount (XLM)"
+                value={amount}
+                onChange={(e) => setAmount(formatAmount(e.target.value))}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  boxSizing: 'border-box',
+                  border: `2px solid ${amountTouched ? (amountValid ? '#22c55e' : '#ef4444') : '#ccc'}`,
+                  borderRadius: '4px',
+                  outline: 'none',
+                }}
+              />
+              {amountTouched && (
+                <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+                  {amountValid ? '✅' : '❌'}
+                </span>
+              )}
+            </div>
+            {amountTouched && amountError && (
+              <p style={{ color: '#ef4444', fontSize: '13px', margin: '0 0 10px' }}>{amountError}</p>
+            )}
+            <button onClick={sendPayment} disabled={!recipientValid || !amountValid}>Send</button>
           </div>
         </>
       )}
