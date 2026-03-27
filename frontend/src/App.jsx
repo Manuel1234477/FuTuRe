@@ -53,6 +53,18 @@ function App() {
   const v = makeVariants(prefersReduced);
   const tap = tapScale(prefersReduced);
 
+  // Show security best practices on first load
+  useEffect(() => {
+    if (!sessionStorage.getItem('securityBestPractices_dismissed')) {
+      setShowSecurityBestPractices(true);
+    }
+  }, []);
+
+  const dismissSecurityBestPractices = () => {
+    setShowSecurityBestPractices(false);
+    sessionStorage.setItem('securityBestPractices_dismissed', 'true');
+  };
+
   const handleWsMessage = (wsMsg) => {
     if (wsMsg.type === 'transaction') {
       const text = wsMsg.direction === 'received'
@@ -141,8 +153,23 @@ function App() {
   const amountError = validateAmount(amount, xlmBalance !== null ? parseFloat(xlmBalance) : null);
   const amountValid = amountTouched && !amountError;
 
+  // Reset large transaction confirmation when amount changes
+  useEffect(() => {
+    if (amount) {
+      setLargeTransactionConfirmed(false);
+    }
+  }, [amount]);
+
   const sendPayment = async () => {
     if (!account || !recipientValid || !amountValid) return;
+    
+    // Check if large transaction is confirmed
+    const numAmount = parseFloat(amount);
+    if (numAmount > 1000 && !largeTransactionConfirmed) {
+      msg.warning('⚠️ Please review and confirm the large transaction warning below.');
+      return;
+    }
+
     setLoading('send');
     const payload = { sourceSecret: account.secretKey, destination: recipient, amount, assetCode: 'XLM' };
     try {
