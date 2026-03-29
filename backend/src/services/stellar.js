@@ -106,7 +106,6 @@ export async function sendPayment(sourceSecret, destination, amount, assetCode =
   let result;
   try {
     result = await getHorizonServer().submitTransaction(transaction);
-    result = await server.submitTransaction(transaction);
   } catch (err) {
     logger.error('stellar.sendPayment.failed', { source: sourcePublicKey, destination, amount, assetCode, error: err.message });
     throw err;
@@ -242,7 +241,7 @@ export async function getTransactions(publicKey, { cursor, limit = 10, type, dat
 }
 
 export async function getFeeStats() {
-  const stats = await server.feeStats();
+  const stats = await getHorizonServer().feeStats();
   const feeStroops = parseInt(stats.fee_charged?.p50 ?? StellarSDK.BASE_FEE);
   const feeXLM = feeStroops / 1e7;
 
@@ -250,7 +249,7 @@ export async function getFeeStats() {
   let xlmUsd = null;
   try {
     const usdc = new StellarSDK.Asset('USDC', 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN');
-    const book = await server.orderbook(StellarSDK.Asset.native(), usdc).limit(1).call();
+    const book = await getHorizonServer().orderbook(StellarSDK.Asset.native(), usdc).limit(1).call();
     const ask = parseFloat(book.asks?.[0]?.price);
     if (ask > 0) xlmUsd = ask;
   } catch (_) {}
@@ -290,7 +289,7 @@ export async function getExchangeRate(from, to) {
   try {
     const fromAsset = from === 'XLM' ? StellarSDK.Asset.native() : new StellarSDK.Asset(from, getIssuer(from));
     const toAsset   = to   === 'XLM' ? StellarSDK.Asset.native() : new StellarSDK.Asset(to,   getIssuer(to));
-    const orderbook = await server.orderbook(fromAsset, toAsset).call();
+    const orderbook = await getHorizonServer().orderbook(fromAsset, toAsset).call();
     const bestAsk = orderbook.asks?.[0]?.price;
     return bestAsk ? parseFloat(bestAsk) : null;
   } catch (err) {
