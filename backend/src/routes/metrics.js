@@ -1,5 +1,6 @@
 import express from 'express';
 import { getSnapshot, resetMetrics } from '../monitoring/metrics.js';
+import { getFeeBumpStats } from '../services/stellar.js';
 import { getCdnStats } from '../cdn/index.js';
 import { checkShardHealth, getShardStats } from '../db/sharding.js';
 
@@ -16,6 +17,9 @@ router.delete('/', (_req, res) => {
   res.json({ message: 'Metrics reset' });
 });
 
+// GET /api/metrics/fee-bump — fee bump usage stats for cost tracking
+router.get('/fee-bump', (_req, res) => {
+  res.json(getFeeBumpStats());
 // GET /api/metrics/cdn — CDN analytics and config
 router.get('/cdn', (_req, res) => {
   res.json(getCdnStats());
