@@ -21,6 +21,9 @@ import metricsRoutes from './routes/metrics.js';
 import transactionRoutes from './routes/transactions.js';
 import complianceRoutes from './routes/compliance.js';
 import pathPaymentRoutes from './routes/pathPayment.js';
+import backupRoutes from './routes/backup.js';
+import { startScheduler } from './backup/manager.js';
+import cacheRoutes from './routes/cache.js';
 import { eventMonitor } from './eventSourcing/index.js';
 import { auditLogger } from './security/index.js';
 import { getConfig } from './config/env.js';
@@ -73,6 +76,8 @@ app.use('/api/metrics', metricsRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/compliance', complianceRoutes);
 app.use('/api/path-payment', pathPaymentRoutes);
+app.use('/api/backup', backupRoutes);
+app.use('/api/cache', cacheRoutes);
 
 app.get('/health', async (req, res) => {
   const db = await checkDBHealth();
@@ -94,4 +99,5 @@ httpServer.listen(PORT, () => {
     logger.info('server.envFiles', { files: meta.loadedEnvFiles.map(p => p.split('/').pop()).join(', ') });
   }
   logger.info('server.started', { port: PORT, network: process.env.STELLAR_NETWORK });
+  startScheduler();
 });
