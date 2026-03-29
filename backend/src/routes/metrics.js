@@ -1,6 +1,8 @@
 import express from 'express';
 import { getSnapshot, resetMetrics } from '../monitoring/metrics.js';
 import { getFeeBumpStats } from '../services/stellar.js';
+import { getCdnStats } from '../cdn/index.js';
+import { checkShardHealth, getShardStats } from '../db/sharding.js';
 
 const router = express.Router();
 
@@ -18,6 +20,19 @@ router.delete('/', (_req, res) => {
 // GET /api/metrics/fee-bump — fee bump usage stats for cost tracking
 router.get('/fee-bump', (_req, res) => {
   res.json(getFeeBumpStats());
+// GET /api/metrics/cdn — CDN analytics and config
+router.get('/cdn', (_req, res) => {
+  res.json(getCdnStats());
+// GET /api/metrics/shards — shard pool stats
+router.get('/shards', (_req, res) => {
+  res.json(getShardStats());
+});
+
+// GET /api/metrics/shards/health — shard health checks
+router.get('/shards/health', async (_req, res) => {
+  const health = await checkShardHealth();
+  const allOk = health.every(h => h.status === 'ok');
+  res.status(allOk ? 200 : 503).json(health);
 });
 
 export default router;
