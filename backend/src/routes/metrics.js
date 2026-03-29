@@ -1,5 +1,6 @@
 import express from 'express';
 import { getSnapshot, resetMetrics } from '../monitoring/metrics.js';
+import { getWsStats } from '../services/websocket.js';
 import { getFeeBumpStats } from '../services/stellar.js';
 import { getCdnStats } from '../cdn/index.js';
 import { checkShardHealth, getShardStats } from '../db/sharding.js';
@@ -17,6 +18,9 @@ router.delete('/', (_req, res) => {
   res.json({ message: 'Metrics reset' });
 });
 
+// GET /api/metrics/websocket — live WebSocket analytics
+router.get('/websocket', (_req, res) => {
+  res.json(getWsStats());
 // GET /api/metrics/fee-bump — fee bump usage stats for cost tracking
 router.get('/fee-bump', (_req, res) => {
   res.json(getFeeBumpStats());
