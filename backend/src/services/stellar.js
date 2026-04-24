@@ -106,11 +106,11 @@ export async function getBalance(publicKey) {
   return { publicKey, balances };
 }
 
-export async function sendPayment(sourceSecret, destination, amount, assetCode = 'XLM') {
+export async function sendPayment(sourceSecret, destination, amount, assetCode = 'XLM', memo = null) {
   const { assetIssuer } = getConfig().stellar;
   const sourceKeypair = StellarSDK.Keypair.fromSecret(sourceSecret);
   const sourcePublicKey = sourceKeypair.publicKey();
-  logger.info('stellar.sendPayment.start', { source: sourcePublicKey, destination, amount, assetCode });
+  logger.info('stellar.sendPayment.start', { source: sourcePublicKey, destination, amount, assetCode, memo });
 
   const sourceAccount = await getHorizonServer().loadAccount(sourcePublicKey);
   
@@ -122,7 +122,7 @@ export async function sendPayment(sourceSecret, destination, amount, assetCode =
     ? StellarSDK.Asset.native() 
     : new StellarSDK.Asset(assetCode, getIssuer(assetCode));
   
-  const transaction = new StellarSDK.TransactionBuilder(sourceAccount, {
+  const txBuilder = new StellarSDK.TransactionBuilder(sourceAccount, {
     fee: StellarSDK.BASE_FEE,
     networkPassphrase: isTestnet() 
       ? StellarSDK.Networks.TESTNET 
@@ -132,9 +132,13 @@ export async function sendPayment(sourceSecret, destination, amount, assetCode =
       destination,
       asset,
       amount: amount.toString()
-    }))
-    .setTimeout(30)
-    .build();
+    }));
+
+  if (memo) {
+    txBuilder.addMemo(StellarSDK.Memo.text(memo));
+  }
+
+  const transaction = txBuilder.setTimeout(30).build();
   
   transaction.sign(sourceKeypair);
 
@@ -179,11 +183,12 @@ export async function sendPayment(sourceSecret, destination, amount, assetCode =
     hash: result.hash,
     ledger: result.ledger,
     feeBump: usedFeeBump,
+    memo,
   });
 
   await eventMonitor.publishEvent(sourcePublicKey, {
     type: 'PaymentSent',
-    data: { destination, amount, hash: result.hash, feeBump: usedFeeBump },
+    data: { destination, amount, hash: result.hash, feeBump: usedFeeBump, memo },
     version: 1
   });
 
@@ -264,7 +269,7 @@ export async function createTrustline(sourceSecret, assetCode) {
 }
 
 export async function getTransactions(publicKey, { cursor, limit = 10, type, dateFrom, dateTo } = {}) {
-  let builder = server.transactions().forAccount(publicKey).order('desc').limit(limit);
+  let builder = getHorizonServer().transactions().forAccount(publicKey).order('desc').limit(limit);
   if (cursor) builder = builder.cursor(cursor);
 
   const page = await builder.call();
@@ -337,23 +342,7 @@ export async function getFeeStats() {
   };
 }
 
-export async function getTransactionHistory(publicKey, { limit = 10, cursor } = {}) {
-  let call = getHorizonServer().transactions().forAccount(publicKey).limit(limit).order('desc');
-  if (cursor) call = call.cursor(cursor);
-  const result = await call.call();
-  return {
-    publicKey,
-    transactions: result.records.map(tx => ({
-      id: tx.id,
-      hash: tx.hash,
-      createdAt: tx.created_at,
-      successful: tx.successful,
-      ledger: tx.ledger_attr,
-      pagingToken: tx.paging_token,
-    })),
-    nextCursor: result.records.at(-1)?.paging_token ?? null,
-  };
-}
+
 
 export async function getExchangeRate(from, to) {
   if (from === to) return 1.0;
