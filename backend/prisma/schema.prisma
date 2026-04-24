@@ -14,8 +14,8 @@ model User {
   settings               Setting?
   sentTxs                Transaction[]           @relation("sender")
   receivedTxs            Transaction[]           @relation("recipient")
-  sentStreams             PaymentStream[]         @relation("streamSender")
-  receivedStreams         PaymentStream[]         @relation("streamRecipient")
+  sentStreams            PaymentStream[]         @relation("streamSender")
+  receivedStreams        PaymentStream[]         @relation("streamRecipient")
   notifications          Notification[]
   notificationPreference NotificationPreference?
   kycRecord              KYCRecord?
@@ -86,6 +86,8 @@ model PaymentStream {
   metadata        Json?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+
+  @@index([status, lastProcessedAt])
 }
 
 model Notification {
@@ -125,7 +127,7 @@ model KYCRecord {
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   status         String   @default("PENDING")
   fullName       String
-  dateOfBirth    String
+  dateOfBirth    DateTime
   nationality    String
   documentType   String
   documentNumber String
